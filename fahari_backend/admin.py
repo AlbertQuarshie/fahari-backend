@@ -1,3 +1,14 @@
 from django.contrib import admin
+from .models import User, Room
 
-# Register your models here.
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = ('username', 'email', 'role', 'is_active')
+    list_filter = ('role', 'is_active')
+    search_fields = ('username', 'email')
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    list_display = ('room_number', 'room_type', 'floor', 'capacity', 'price_per_night', 'status')
+    list_filter = ('room_type', 'status', 'floor')
+    search_fields = ('room_number',)
