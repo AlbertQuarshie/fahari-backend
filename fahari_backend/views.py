@@ -5,6 +5,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from fahari_backend.models import User, Room
 from .serializers import RegisterSerializer, UserSerializer, RoomSerializer
 from .permissions import IsAdmin
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class RegisterView(generics.CreateAPIView):
@@ -33,7 +34,12 @@ class MeView(APIView):
 class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter
+    ]
+    filterset_fields = ['room_type', 'status', 'floor', 'capacity']
     search_fields = ['room_number', 'room_type']
     ordering_fields = ['price_per_night', 'floor']
 
