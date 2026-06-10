@@ -1,6 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
+import uuid
 
 
 class User(AbstractUser):
@@ -95,3 +95,38 @@ class Room(models.Model):
 
     class Meta:
         ordering = ['floor', 'room_number']
+
+class Booking(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+        ('checked_in', 'Checked In'),
+        ('checked_out', 'Checked Out'),
+        ('cancelled', 'Cancelled'),
+    )
+
+    booking_reference = models.CharField(max_length=20, unique=True, blank=True)
+    guest = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings')
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='bookings')
+    check_in_date = models.DateField()
+    check_out_date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    early_check_in = models.BooleanField(default=False)
+    late_check_out = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.booking_reference:
+            self.booking_reference = 'FG-' + str(uuid.uuid4()).upper()[:8]
+        if not self.total_price:
+            delta = self.check_out_date - self.check_in_date
+            self.total_price = delta.days * self.room.price_per_night
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.booking_reference} - {self.guest.username} - Room {self.room.room_number}"
+
+    class Meta:
+        ordering = ['-created_at']

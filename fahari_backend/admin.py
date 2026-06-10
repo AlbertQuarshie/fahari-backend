@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Room
+from .models import User, Room, Booking
 
 
 @admin.register(User)
@@ -47,3 +47,9 @@ class RoomAdmin(admin.ModelAdmin):
     search_fields = (
         'room_number',
     )
+
+@admin.register(Booking)
+class BookingAdmin(admin.ModelAdmin):
+    list_display = ('booking_reference', 'guest', 'room', 'check_in_date', 'check_out_date', 'status', 'total_price')
+    list_filter = ('status',)
+    search_fields = ('booking_reference', 'guest__username', 'room__room_number')
