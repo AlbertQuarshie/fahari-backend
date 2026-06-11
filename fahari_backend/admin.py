@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Room, Booking
+from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest
 
 
 @admin.register(User)
@@ -53,3 +53,15 @@ class BookingAdmin(admin.ModelAdmin):
     list_display = ('booking_reference', 'guest', 'room', 'check_in_date', 'check_out_date', 'status', 'total_price')
     list_filter = ('status',)
     search_fields = ('booking_reference', 'guest__username', 'room__room_number')
+
+@admin.register(HousekeepingAssignment)
+class HousekeepingAdmin(admin.ModelAdmin):
+    list_display = ('room', 'housekeeper', 'status', 'assigned_date')
+    list_filter = ('status', 'assigned_date')
+    search_fields = ('room__room_number', 'housekeeper__username')
+
+@admin.register(MaintenanceRequest)
+class MaintenanceAdmin(admin.ModelAdmin):
+    list_display = ('room', 'reported_by', 'priority', 'status', 'created_at')
+    list_filter = ('priority', 'status')
+    search_fields = ('room__room_number',)

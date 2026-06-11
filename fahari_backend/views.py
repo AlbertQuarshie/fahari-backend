@@ -3,10 +3,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from fahari_backend.models import User, Room
-from .serializers import RegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer
-from .permissions import IsAdmin, IsReceptionist
+from .serializers import RegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer
+from .permissions import IsAdmin, IsReceptionist, IsHousekeeper
 from django_filters.rest_framework import DjangoFilterBackend
-from fahari_backend.models import User, Room, Booking
+from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest
 
 
 class RegisterView(generics.CreateAPIView):
@@ -88,3 +88,88 @@ class CancelBookingView(APIView):
             return Response({"detail": "Booking cancelled successfully."})
         except Booking.DoesNotExist:
             return Response({"detail": "Booking not found."}, status=404)
+
+class CheckInOutView(APIView):
+    permission_classes = [IsReceptionist]
+
+    def post(self, request, pk):
+        try:
+            booking = Booking.objects.get(pk=pk)
+            action = request.data.get('action')
+
+            if action == 'check_in':
+                if booking.status != 'confirmed':
+                    return Response({"detail": "Booking must be confirmed before check-in."}, status=400)
+                booking.status = 'checked_in'
+                booking.room.status = 'occupied'
+                booking.room.save()
+
+            elif action == 'check_out':
+                if booking.status != 'checked_in':
+                    return Response({"detail": "Guest must be checked in before check-out."}, status=400)
+                booking.status = 'checked_out'
+                booking.room.status = 'cleaning'
+                booking.room.save()
+
+            else:
+                return Response({"detail": "Invalid action. Use 'check_in' or 'check_out'."}, status=400)
+
+            booking.save()
+            return Response({"detail": f"{action.replace('_', ' ').title()} successful.", "status": booking.status})
+
+        except Booking.DoesNotExist:
+            return Response({"detail": "Booking not found."}, status=404)
+
+
+class ConfirmBookingView(APIView):
+    permission_classes = [IsReceptionist]
+
+    def post(self, request, pk):
+        try:
+            booking = Booking.objects.get(pk=pk)
+            if booking.status != 'pending':
+                return Response({"detail": "Only pending bookings can be confirmed."}, status=400)
+            booking.status = 'confirmed'
+            booking.save()
+            return Response({"detail": "Booking confirmed.", "status": booking.status})
+        except Booking.DoesNotExist:
+            return Response({"detail": "Booking not found."}, status=404)
+
+
+class HousekeepingViewSet(viewsets.ModelViewSet):
+    serializer_class = HousekeepingAssignmentSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role in ['admin', 'receptionist']:
+            return HousekeepingAssignment.objects.all()
+        return HousekeepingAssignment.objects.filter(housekeeper=user)
+
+    def get_permissions(self):
+        if self.action in ['create', 'destroy']:
+            permission_classes = [IsAdmin]
+        elif self.action in ['update', 'partial_update']:
+            permission_classes = [IsHousekeeper]
+        else:
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
+
+
+class MaintenanceRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = MaintenanceRequestSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role in ['admin', 'receptionist']:
+            return MaintenanceRequest.objects.all()
+        return MaintenanceRequest.objects.filter(reported_by=user)
+
+    def get_permissions(self):
+        if self.action == 'destroy':
+            permission_classes = [IsAdmin]
+        else:
+            permission_classes = [IsHousekeeper]
+        return [permission() for permission in permission_classes]
+
+    def perform_create(self, serializer):
+        serializer.save(reported_by=self.request.user)

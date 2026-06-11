@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from fahari_backend.models import User, Room, Booking
+from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest
 from datetime import date
 
 
@@ -96,7 +96,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'late_check_out',
             'created_at',
         )
-        read_only_fields = ('id', 'booking_reference', 'total_price', 'created_at')
+        read_only_fields = ('id', 'booking_reference', 'total_price', 'created_at', 'guest')
 
     def validate(self, data):
         check_in = data.get('check_in_date')
@@ -124,3 +124,22 @@ class BookingSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Room is not available for the selected dates.")
 
         return data
+
+class HousekeepingAssignmentSerializer(serializers.ModelSerializer):
+    room_number = serializers.CharField(source='room.room_number', read_only=True)
+    housekeeper_name = serializers.CharField(source='housekeeper.username', read_only=True)
+
+    class Meta:
+        model = HousekeepingAssignment
+        fields = ('id', 'room', 'room_number', 'housekeeper', 'housekeeper_name', 'status', 'assigned_date', 'notes', 'updated_at')
+        read_only_fields = ('id', 'assigned_date', 'updated_at')
+
+
+class MaintenanceRequestSerializer(serializers.ModelSerializer):
+    room_number = serializers.CharField(source='room.room_number', read_only=True)
+    reported_by_username = serializers.CharField(source='reported_by.username', read_only=True)
+
+    class Meta:
+        model = MaintenanceRequest
+        fields = ('id', 'room', 'room_number', 'reported_by', 'reported_by_username', 'description', 'priority', 'status', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'reported_by', 'created_at', 'updated_at')
