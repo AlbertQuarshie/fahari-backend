@@ -178,3 +178,18 @@ class MaintenanceRequest(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        
+class Review(models.Model):
+    guest = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='reviews')
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='review')
+    rating = models.IntegerField()
+    comment = models.TextField(blank=True)
+    is_approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Review by {self.guest.username} for Room {self.room.room_number} - {self.rating}★"
+
+    class Meta:
+        ordering = ['-created_at']

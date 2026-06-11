@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest
+from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review
 from datetime import date
 
 
@@ -143,3 +143,25 @@ class MaintenanceRequestSerializer(serializers.ModelSerializer):
         model = MaintenanceRequest
         fields = ('id', 'room', 'room_number', 'reported_by', 'reported_by_username', 'description', 'priority', 'status', 'created_at', 'updated_at')
         read_only_fields = ('id', 'reported_by', 'created_at', 'updated_at')
+
+class ReviewSerializer(serializers.ModelSerializer):
+    guest_username = serializers.CharField(source='guest.username', read_only=True)
+    room_number = serializers.CharField(source='room.room_number', read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ('id', 'guest', 'guest_username', 'room', 'room_number', 'booking', 'rating', 'comment', 'is_approved', 'created_at')
+        read_only_fields = ('id', 'guest', 'is_approved', 'created_at')
+
+    def validate_rating(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value
+
+    def validate(self, data):
+        booking = data.get('booking')
+        if booking and booking.status != 'checked_out':
+            raise serializers.ValidationError("You can only review after checkout.")
+        if booking and booking.guest != self.context['request'].user:
+            raise serializers.ValidationError("You can only review your own bookings.")
+        return data

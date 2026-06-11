@@ -5,7 +5,8 @@ from .views import (
     RegisterView, LogoutView, MeView,
     RoomViewSet, BookingViewSet, CancelBookingView,
     CheckInOutView, ConfirmBookingView,
-    HousekeepingViewSet, MaintenanceRequestViewSet
+    HousekeepingViewSet, MaintenanceRequestViewSet,
+    ReviewViewSet, AdminDashboardView
 )
 
 router = DefaultRouter()
@@ -13,6 +14,7 @@ router.register(r'rooms', RoomViewSet, basename='room')
 router.register(r'bookings', BookingViewSet, basename='booking')
 router.register(r'housekeeping', HousekeepingViewSet, basename='housekeeping')
 router.register(r'maintenance', MaintenanceRequestViewSet, basename='maintenance')
+router.register(r'reviews', ReviewViewSet, basename='review')
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -23,5 +25,6 @@ urlpatterns = [
     path('bookings/<int:pk>/cancel/', CancelBookingView.as_view(), name='cancel-booking'),
     path('bookings/<int:pk>/checkinout/', CheckInOutView.as_view(), name='checkinout'),
     path('bookings/<int:pk>/confirm/', ConfirmBookingView.as_view(), name='confirm-booking'),
+    path('admin/dashboard/', AdminDashboardView.as_view(), name='admin-dashboard'),
     path('', include(router.urls)),
 ]

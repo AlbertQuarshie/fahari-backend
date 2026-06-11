@@ -3,10 +3,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from fahari_backend.models import User, Room
-from .serializers import RegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer
+from .serializers import RegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer, ReviewSerializer
 from .permissions import IsAdmin, IsReceptionist, IsHousekeeper
 from django_filters.rest_framework import DjangoFilterBackend
-from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest
+from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review
 
 
 class RegisterView(generics.CreateAPIView):
@@ -173,3 +173,89 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(reported_by=self.request.user)
+class ReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'admin':
+            return Review.objects.all()
+        return Review.objects.filter(is_approved=True)
+
+    def get_permissions(self):
+        if self.action == 'create':
+            permission_classes = [permissions.IsAuthenticated]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsAdmin]
+        else:
+            permission_classes = [permissions.AllowAny]
+        return [permission() for permission in permission_classes]
+
+    def perform_create(self, serializer):
+        serializer.save(guest=self.request.user)
+
+
+class AdminDashboardView(APIView):
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        from django.utils import timezone
+        from django.db.models import Sum, Count
+        import datetime
+
+        today = timezone.now().date()
+        week_ago = today - datetime.timedelta(days=7)
+        month_ago = today - datetime.timedelta(days=30)
+
+        # revenue
+        daily_revenue = Booking.objects.filter(
+            status='checked_out',
+            check_out_date=today
+        ).aggregate(total=Sum('total_price'))['total'] or 0
+
+        weekly_revenue = Booking.objects.filter(
+            status='checked_out',
+            check_out_date__gte=week_ago
+        ).aggregate(total=Sum('total_price'))['total'] or 0
+
+        monthly_revenue = Booking.objects.filter(
+            status='checked_out',
+            check_out_date__gte=month_ago
+        ).aggregate(total=Sum('total_price'))['total'] or 0
+
+        # booking stats
+        total_bookings = Booking.objects.count()
+        pending_bookings = Booking.objects.filter(status='pending').count()
+        confirmed_bookings = Booking.objects.filter(status='confirmed').count()
+        checked_in = Booking.objects.filter(status='checked_in').count()
+
+        # room stats
+        total_rooms = Room.objects.count()
+        available_rooms = Room.objects.filter(status='available').count()
+        occupied_rooms = Room.objects.filter(status='occupied').count()
+        cleaning_rooms = Room.objects.filter(status='cleaning').count()
+
+        # recent bookings
+        recent_bookings = Booking.objects.select_related('guest', 'room').order_by('-created_at')[:5]
+        recent_bookings_data = BookingSerializer(recent_bookings, many=True).data
+
+        return Response({
+            'revenue': {
+                'daily': daily_revenue,
+                'weekly': weekly_revenue,
+                'monthly': monthly_revenue,
+            },
+            'bookings': {
+                'total': total_bookings,
+                'pending': pending_bookings,
+                'confirmed': confirmed_bookings,
+                'checked_in': checked_in,
+            },
+            'rooms': {
+                'total': total_rooms,
+                'available': available_rooms,
+                'occupied': occupied_rooms,
+                'cleaning': cleaning_rooms,
+            },
+            'recent_bookings': recent_bookings_data,
+        })

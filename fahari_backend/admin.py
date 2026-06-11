@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest
+from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review
 
 
 @admin.register(User)
@@ -65,3 +65,15 @@ class MaintenanceAdmin(admin.ModelAdmin):
     list_display = ('room', 'reported_by', 'priority', 'status', 'created_at')
     list_filter = ('priority', 'status')
     search_fields = ('room__room_number',)
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('guest', 'room', 'rating', 'is_approved', 'created_at')
+    list_filter = ('is_approved', 'rating')
+    search_fields = ('guest__username', 'room__room_number')
+    actions = ['approve_reviews']
+
+    def approve_reviews(self, request, queryset):
+        queryset.update(is_approved=True)
+    approve_reviews.short_description = "Approve selected reviews"
