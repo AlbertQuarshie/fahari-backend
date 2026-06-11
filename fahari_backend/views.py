@@ -259,3 +259,78 @@ class AdminDashboardView(APIView):
             },
             'recent_bookings': recent_bookings_data,
         })
+
+class WalkInBookingView(APIView):
+    permission_classes = [IsReceptionist]
+
+    def post(self, request):
+        serializer = BookingSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            guest_id = request.data.get('guest')
+            try:
+                guest = User.objects.get(pk=guest_id)
+            except User.DoesNotExist:
+                return Response({"detail": "Guest not found."}, status=404)
+            booking = serializer.save(guest=guest, status='confirmed')
+            return Response(BookingSerializer(booking).data, status=201)
+        return Response(serializer.errors, status=400)
+
+
+class DailyRosterView(APIView):
+    permission_classes = [IsReceptionist]
+
+    def get(self, request):
+        from django.utils import timezone
+        today = timezone.now().date()
+
+        checking_in = Booking.objects.filter(
+            check_in_date=today,
+            status='confirmed'
+        ).select_related('guest', 'room')
+
+        checking_out = Booking.objects.filter(
+            check_out_date=today,
+            status='checked_in'
+        ).select_related('guest', 'room')
+
+        currently_in = Booking.objects.filter(
+            status='checked_in'
+        ).select_related('guest', 'room')
+
+        return Response({
+            'date': today,
+            'checking_in': BookingSerializer(checking_in, many=True).data,
+            'checking_out': BookingSerializer(checking_out, many=True).data,
+            'currently_checked_in': BookingSerializer(currently_in, many=True).data,
+        })
+
+
+class GuestBookingHistoryView(APIView):
+    permission_classes = [IsReceptionist]
+
+    def get(self, request, guest_id):
+        try:
+            guest = User.objects.get(pk=guest_id)
+            bookings = Booking.objects.filter(guest=guest).order_by('-created_at')
+            return Response({
+                'guest': UserSerializer(guest).data,
+                'bookings': BookingSerializer(bookings, many=True).data
+            })
+        except User.DoesNotExist:
+            return Response({"detail": "Guest not found."}, status=404)
+
+
+class StaffListView(APIView):
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        staff = User.objects.exclude(role='guest')
+        serializer = UserSerializer(staff, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(UserSerializer(user).data, status=201)
+        return Response(serializer.errors, status=400)

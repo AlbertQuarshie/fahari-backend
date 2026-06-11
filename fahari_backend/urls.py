@@ -6,7 +6,9 @@ from .views import (
     RoomViewSet, BookingViewSet, CancelBookingView,
     CheckInOutView, ConfirmBookingView,
     HousekeepingViewSet, MaintenanceRequestViewSet,
-    ReviewViewSet, AdminDashboardView
+    ReviewViewSet, AdminDashboardView,
+    WalkInBookingView, DailyRosterView,
+    GuestBookingHistoryView, StaffListView
 )
 
 router = DefaultRouter()
@@ -26,5 +28,9 @@ urlpatterns = [
     path('bookings/<int:pk>/checkinout/', CheckInOutView.as_view(), name='checkinout'),
     path('bookings/<int:pk>/confirm/', ConfirmBookingView.as_view(), name='confirm-booking'),
     path('admin/dashboard/', AdminDashboardView.as_view(), name='admin-dashboard'),
+    path('receptionist/walkin/', WalkInBookingView.as_view(), name='walkin-booking'),
+    path('receptionist/roster/', DailyRosterView.as_view(), name='daily-roster'),
+    path('receptionist/guest/<int:guest_id>/bookings/', GuestBookingHistoryView.as_view(), name='guest-history'),
+    path('staff/', StaffListView.as_view(), name='staff-list'),
     path('', include(router.urls)),
 ]
