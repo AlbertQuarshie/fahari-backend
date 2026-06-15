@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 import uuid
 
-
+# User Models
 class User(AbstractUser):
     ROLE_CHOICES = (
         ('guest', 'Guest'),
@@ -43,7 +43,7 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.role})"
 
-
+# Room models
 class Room(models.Model):
     STATUS_CHOICES = (
         ('available', 'Available'),
@@ -96,6 +96,8 @@ class Room(models.Model):
     class Meta:
         ordering = ['floor', 'room_number']
 
+
+# Booking Models
 class Booking(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Pending'),
@@ -131,6 +133,8 @@ class Booking(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+
+# Housekeeping Models
 class HousekeepingAssignment(models.Model):
     STATUS_CHOICES = (
         ('dirty', 'Dirty'),
@@ -152,7 +156,7 @@ class HousekeepingAssignment(models.Model):
     class Meta:
         ordering = ['-assigned_date']
 
-
+# Maintenance Requests
 class MaintenanceRequest(models.Model):
     PRIORITY_CHOICES = (
         ('low', 'Low'),
@@ -178,7 +182,9 @@ class MaintenanceRequest(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-        
+
+
+# Review Models
 class Review(models.Model):
     guest = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='reviews')
@@ -193,3 +199,24 @@ class Review(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+# Mpesa Payment Model
+class Payment(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    )
+
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='payment')
+    phone_number = models.CharField(max_length=15)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    mpesa_checkout_id = models.CharField(max_length=100, blank=True)
+    mpesa_receipt = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Payment for {self.booking.booking_reference} - {self.status}"

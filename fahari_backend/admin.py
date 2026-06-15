@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review
+from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment
 
 
 @admin.register(User)
@@ -77,3 +77,9 @@ class ReviewAdmin(admin.ModelAdmin):
     def approve_reviews(self, request, queryset):
         queryset.update(is_approved=True)
     approve_reviews.short_description = "Approve selected reviews"
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ('booking', 'phone_number', 'amount', 'status', 'mpesa_receipt', 'created_at')
+    list_filter = ('status',)
+    search_fields = ('booking__booking_reference', 'mpesa_receipt')

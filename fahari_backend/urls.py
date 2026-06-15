@@ -8,7 +8,8 @@ from .views import (
     HousekeepingViewSet, MaintenanceRequestViewSet,
     ReviewViewSet, AdminDashboardView,
     WalkInBookingView, DailyRosterView,
-    GuestBookingHistoryView, StaffListView
+    GuestBookingHistoryView, StaffListView,
+    InitiatePaymentView, PaymentStatusView, MpesaCallbackView
 )
 
 router = DefaultRouter()
@@ -23,11 +24,17 @@ urlpatterns = [
     path('login/', TokenObtainPairView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', LogoutView.as_view(), name='logout'),
+
     path('me/', MeView.as_view(), name='me'),
     path('bookings/<int:pk>/cancel/', CancelBookingView.as_view(), name='cancel-booking'),
     path('bookings/<int:pk>/checkinout/', CheckInOutView.as_view(), name='checkinout'),
     path('bookings/<int:pk>/confirm/', ConfirmBookingView.as_view(), name='confirm-booking'),
+    path('bookings/<int:booking_id>/pay/', InitiatePaymentView.as_view(), name='initiate-payment'),
+    path('bookings/<int:booking_id>/payment/', PaymentStatusView.as_view(), name='payment-status'),
+
     path('admin/dashboard/', AdminDashboardView.as_view(), name='admin-dashboard'),
+
+    path('mpesa/callback/', MpesaCallbackView.as_view(), name='mpesa-callback'),
     path('receptionist/walkin/', WalkInBookingView.as_view(), name='walkin-booking'),
     path('receptionist/roster/', DailyRosterView.as_view(), name='daily-roster'),
     path('receptionist/guest/<int:guest_id>/bookings/', GuestBookingHistoryView.as_view(), name='guest-history'),

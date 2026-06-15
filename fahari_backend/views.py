@@ -2,12 +2,17 @@ from rest_framework import generics, permissions, viewsets, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from fahari_backend.models import User, Room
-from .serializers import RegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer, ReviewSerializer
+from .models import User, Room
+from .serializers import RegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer, ReviewSerializer, PaymentSerializer
 from .permissions import IsAdmin, IsReceptionist, IsHousekeeper
 from django_filters.rest_framework import DjangoFilterBackend
-from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review
+from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment
+from .mpesa import stk_push, stk_query, mpesa_success_code
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+import logging
 
+logger = logging.getLogger(__name__)
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -334,3 +339,156 @@ class StaffListView(APIView):
             user = serializer.save()
             return Response(UserSerializer(user).data, status=201)
         return Response(serializer.errors, status=400)
+
+
+def _apply_stk_result(payment, result_code, callback_metadata=None):
+    if mpesa_success_code(result_code):
+        receipt = ""
+        if callback_metadata:
+            items = callback_metadata.get("Item", [])
+            receipt = next(
+                (item["Value"] for item in items if item.get("Name") == "MpesaReceiptNumber"),
+                "",
+            )
+        payment.mpesa_receipt = receipt
+        payment.status = "completed"
+        payment.booking.status = "confirmed"
+        payment.booking.save(update_fields=["status", "updated_at"])
+    else:
+        payment.status = "failed"
+
+    payment.save(update_fields=["mpesa_receipt", "status", "updated_at"])
+
+
+def _sync_pending_payment(payment):
+    if payment.status != "pending" or not payment.mpesa_checkout_id:
+        return payment
+
+    response = stk_query(payment.mpesa_checkout_id)
+    if response.get("error"):
+        return payment
+
+    result_code = response.get("ResultCode")
+    if result_code is None:
+        return payment
+
+    if mpesa_success_code(result_code):
+        _apply_stk_result(payment, result_code)
+    elif int(result_code) != 0:
+        payment.status = "failed"
+        payment.save(update_fields=["status", "updated_at"])
+
+    return payment
+
+
+class InitiatePaymentView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, booking_id):
+        try:
+            booking = Booking.objects.get(pk=booking_id, guest=request.user)
+        except Booking.DoesNotExist:
+            return Response({"detail": "Booking not found."}, status=404)
+
+        if booking.status not in ['pending', 'confirmed']:
+            return Response({"detail": "Booking cannot be paid at this stage."}, status=400)
+
+        if hasattr(booking, 'payment') and booking.payment.status == 'completed':
+            return Response({"detail": "Booking already paid."}, status=400)
+
+        phone_number = request.data.get('phone_number')
+        if not phone_number:
+            return Response({"detail": "Phone number is required."}, status=400)
+
+        response = stk_push(
+            phone_number=phone_number,
+            amount=booking.total_price,
+            booking_reference=booking.booking_reference,
+        )
+
+        if response.get("error"):
+            return Response({"detail": response["detail"]}, status=502)
+
+        if str(response.get("ResponseCode")) != "0":
+            return Response(
+                {
+                    "detail": response.get("ResponseDescription", "Failed to initiate payment."),
+                    "mpesa_response": response,
+                },
+                status=400,
+            )
+
+        payment, created = Payment.objects.get_or_create(
+            booking=booking,
+            defaults={
+                "phone_number": phone_number,
+                "amount": booking.total_price,
+                "mpesa_checkout_id": response.get("CheckoutRequestID", ""),
+                "status": "pending",
+            },
+        )
+        if not created:
+            payment.phone_number = phone_number
+            payment.amount = booking.total_price
+            payment.mpesa_checkout_id = response.get("CheckoutRequestID", "")
+            payment.status = "pending"
+            payment.mpesa_receipt = ""
+            payment.save()
+
+        return Response(
+            {
+                "detail": "STK push sent successfully. Check your phone.",
+                "payment": PaymentSerializer(payment).data,
+                "checkout_request_id": response.get("CheckoutRequestID"),
+                "booking_reference": booking.booking_reference,
+                "amount": booking.total_price,
+            }
+        )
+
+
+class PaymentStatusView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, booking_id):
+        try:
+            booking = Booking.objects.get(pk=booking_id, guest=request.user)
+        except Booking.DoesNotExist:
+            return Response({"detail": "Booking not found."}, status=404)
+
+        if not hasattr(booking, "payment"):
+            return Response({"detail": "No payment found for this booking."}, status=404)
+
+        payment = _sync_pending_payment(booking.payment)
+        return Response(PaymentSerializer(payment).data)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class MpesaCallbackView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        data = request.data
+        logger.info("M-Pesa callback received: %s", data)
+
+        try:
+            stk_callback = data["Body"]["stkCallback"]
+            result_code = stk_callback["ResultCode"]
+            checkout_id = stk_callback["CheckoutRequestID"]
+            callback_metadata = stk_callback.get("CallbackMetadata")
+
+            payment = Payment.objects.get(mpesa_checkout_id=checkout_id)
+            _apply_stk_result(payment, result_code, callback_metadata)
+            return Response({"ResultCode": 0, "ResultDesc": "Success"})
+
+        except Payment.DoesNotExist:
+            logger.error("M-Pesa callback for unknown checkout ID: %s", data)
+            return Response({"ResultCode": 0, "ResultDesc": "Success"})
+
+        except (KeyError, TypeError) as exc:
+            logger.error("Invalid M-Pesa callback payload: %s", exc)
+            return Response({"ResultCode": 1, "ResultDesc": "Invalid payload"}, status=400)
+
+        except Exception:
+            logger.exception("M-Pesa callback processing failed")
+            return Response({"ResultCode": 1, "ResultDesc": "Processing failed"}, status=500)

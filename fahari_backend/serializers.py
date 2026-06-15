@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review
+from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment
 from datetime import date
 
 
@@ -165,3 +165,11 @@ class ReviewSerializer(serializers.ModelSerializer):
         if booking and booking.guest != self.context['request'].user:
             raise serializers.ValidationError("You can only review your own bookings.")
         return data
+
+class PaymentSerializer(serializers.ModelSerializer):
+    booking_reference = serializers.CharField(source='booking.booking_reference', read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = ('id', 'booking', 'booking_reference', 'phone_number', 'amount', 'mpesa_checkout_id', 'mpesa_receipt', 'status', 'created_at')
+        read_only_fields = ('id', 'mpesa_checkout_id', 'mpesa_receipt', 'status', 'created_at')
