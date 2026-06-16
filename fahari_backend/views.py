@@ -30,6 +30,83 @@ class LogoutView(APIView):
         except Exception:
             return Response({"detail": "Invalid token."}, status=400)
 
+class UserDetailView(APIView):
+    permission_classes = [IsAdmin]
+
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(pk=user_id)
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=404)
+
+    def patch(self, request, user_id):
+        try:
+            user = User.objects.get(pk=user_id)
+            serializer = UserSerializer(user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=400)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=404)
+
+    def delete(self, request, user_id):
+        try:
+            user = User.objects.get(pk=user_id)
+            if user.is_superuser:
+                return Response({"detail": "Cannot delete superuser."}, status=400)
+            user.delete()
+            return Response({"detail": "User deleted successfully."}, status=204)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=404)
+
+
+class UserListView(APIView):
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        role = request.query_params.get('role', None)
+        users = User.objects.all()
+        if role:
+            users = users.filter(role=role)
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+
+
+class UpdateProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+
+        if not old_password or not new_password:
+            return Response({"detail": "Both old and new password required."}, status=400)
+
+        if not request.user.check_password(old_password):
+            return Response({"detail": "Old password is incorrect."}, status=400)
+
+        if len(new_password) < 6:
+            return Response({"detail": "New password must be at least 6 characters."}, status=400)
+
+        request.user.set_password(new_password)
+        request.user.save()
+        return Response({"detail": "Password changed successfully."})
+
+
 
 class MeView(APIView):
     def get(self, request):

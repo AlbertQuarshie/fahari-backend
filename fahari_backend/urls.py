@@ -9,7 +9,8 @@ from .views import (
     ReviewViewSet, AdminDashboardView,
     WalkInBookingView, DailyRosterView,
     GuestBookingHistoryView, StaffListView,
-    InitiatePaymentView, PaymentStatusView, MpesaCallbackView
+    InitiatePaymentView, PaymentStatusView, MpesaCallbackView,
+    UserDetailView, UserListView, UpdateProfileView, ChangePasswordView
 )
 
 router = DefaultRouter()
@@ -24,6 +25,11 @@ urlpatterns = [
     path('login/', TokenObtainPairView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', LogoutView.as_view(), name='logout'),
+
+    path('users/', UserListView.as_view(), name='user-list'),
+    path('users/<int:user_id>/', UserDetailView.as_view(), name='user-detail'),
+    path('profile/update/', UpdateProfileView.as_view(), name='update-profile'),
+    path('profile/change-password/', ChangePasswordView.as_view(), name='change-password'),
 
     path('me/', MeView.as_view(), name='me'),
     path('bookings/<int:pk>/cancel/', CancelBookingView.as_view(), name='cancel-booking'),
