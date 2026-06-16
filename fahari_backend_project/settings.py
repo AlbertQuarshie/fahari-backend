@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 from decouple import config
 import dj_database_url
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +47,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'fahari_backend',
     'django_filters',
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 
@@ -114,16 +117,8 @@ WSGI_APPLICATION = 'fahari_backend_project.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-    }
+    'default': dj_database_url.config(default=config('DATABASE_URL'))
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -149,7 +144,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Nairobi'
 
 USE_I18N = True
 
@@ -162,3 +157,18 @@ APPEND_SLASH = False
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Cloudinary Configuration
+import cloudinary
+
+cloudinary.config(
+    cloud_name=config('CLOUDINARY_CLOUD_NAME', default=''),
+    api_key=config('CLOUDINARY_API_KEY', default=''),
+    api_secret=config('CLOUDINARY_API_SECRET', default=''),
+)
+
+# Use Cloudinary for media storage
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# Media files served from Cloudinary
+MEDIA_URL = '/media/'

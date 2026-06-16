@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from cloudinary.models import CloudinaryField
 import uuid
 
 # User Models
@@ -22,8 +23,8 @@ class User(AbstractUser):
 
     phone = models.CharField(max_length=20)
 
-    profile_image = models.ImageField(
-        upload_to='profiles/',
+    profile_image = CloudinaryField(
+        'image',
         blank=True,
         null=True
     )
@@ -80,8 +81,8 @@ class Room(models.Model):
         default='available'
     )
 
-    image = models.ImageField(
-        upload_to='rooms/',
+    image = CloudinaryField(
+        'image',
         blank=True,
         null=True
     )
