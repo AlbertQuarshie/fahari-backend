@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Room
-from .serializers import RegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer, ReviewSerializer, PaymentSerializer
+from .serializers import RegisterSerializer, StaffRegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer, ReviewSerializer, PaymentSerializer
 from .permissions import IsAdmin, IsReceptionist, IsHousekeeper
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment
@@ -18,6 +18,11 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
+
+
+class StaffRegisterView(generics.CreateAPIView):
+    serializer_class = StaffRegisterSerializer
+    permission_classes = [IsAdmin]
 
 
 class LogoutView(APIView):

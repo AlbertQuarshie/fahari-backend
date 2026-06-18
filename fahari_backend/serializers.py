@@ -4,39 +4,79 @@ from datetime import date
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(
-        write_only=True,
-        min_length=6
-    )
+    password = serializers.CharField(write_only=True, min_length=6)
+    confirm_password = serializers.CharField(write_only=True, min_length=6)
 
     class Meta:
         model = User
         fields = (
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'email',
-            'password',
-            'role',
-            'phone',
-            'profile_image'
+            'id', 'username', 'first_name', 'last_name',
+            'email', 'password', 'confirm_password', 'phone', 'profile_image'
         )
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate(self, data):
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        return data
 
     def create(self, validated_data):
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', ''),
-            email=validated_data.get('email', ''),
-            password=validated_data['password'],
-            role=validated_data.get('role', 'guest'),
-            phone=validated_data.get('phone', ''),
-            profile_image=validated_data.get('profile_image', None),
+        validated_data.pop('confirm_password')
+        return User.objects.create_user(
+            role='guest',
             is_active=True,
+            **validated_data
         )
 
-        return user
+
+class StaffRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=6)
+    confirm_password = serializers.CharField(write_only=True, min_length=6)
+
+    STAFF_ROLES = ['receptionist', 'housekeeper', 'admin']
+
+    class Meta:
+        model = User
+        fields = (
+            'id', 'username', 'first_name', 'last_name',
+            'email', 'password', 'confirm_password', 'role', 'phone', 'profile_image'
+        )
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_role(self, value):
+        if value not in self.STAFF_ROLES:
+            raise serializers.ValidationError(f"Role must be one of: {', '.join(self.STAFF_ROLES)}")
+        return value
+
+    def validate(self, data):
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        return data
+
+    def create(self, validated_data):
+        validated_data.pop('confirm_password')
+        return User.objects.create_user(
+            is_active=True,
+            **validated_data
+        )
 
 
 class UserSerializer(serializers.ModelSerializer):

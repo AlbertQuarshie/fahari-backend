@@ -158,17 +158,23 @@ APPEND_SLASH = False
 
 STATIC_URL = 'static/'
 
-# Cloudinary Configuration
 import cloudinary
 
+# Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': config('CLOUDINARY_API_KEY'),
+    'API_SECRET': config('CLOUDINARY_API_SECRET'),
+}
+
 cloudinary.config(
-    cloud_name=config('CLOUDINARY_CLOUD_NAME', default=''),
-    api_key=config('CLOUDINARY_API_KEY', default=''),
-    api_secret=config('CLOUDINARY_API_SECRET', default=''),
+    cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+    api_key=CLOUDINARY_STORAGE['API_KEY'],
+    api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+    secure=True,
 )
 
 # Use Cloudinary for media storage
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-# Media files served from Cloudinary
 MEDIA_URL = '/media/'

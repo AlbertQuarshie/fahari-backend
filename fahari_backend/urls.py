@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
-    RegisterView, LogoutView, MeView,
+    RegisterView, StaffRegisterView, LogoutView, MeView,
     RoomViewSet, BookingViewSet, CancelBookingView,
     CheckInOutView, ConfirmBookingView,
     HousekeepingViewSet, MaintenanceRequestViewSet,
@@ -22,6 +22,7 @@ router.register(r'reviews', ReviewViewSet, basename='review')
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
+    path('staff/register/', StaffRegisterView.as_view(), name='staff-register'),
     path('login/', TokenObtainPairView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', LogoutView.as_view(), name='logout'),
@@ -39,11 +40,12 @@ urlpatterns = [
     path('bookings/<int:booking_id>/payment/', PaymentStatusView.as_view(), name='payment-status'),
 
     path('admin/dashboard/', AdminDashboardView.as_view(), name='admin-dashboard'),
+    path('staff/', StaffListView.as_view(), name='staff-list'),
+    
 
     path('mpesa/callback/', MpesaCallbackView.as_view(), name='mpesa-callback'),
     path('receptionist/walkin/', WalkInBookingView.as_view(), name='walkin-booking'),
     path('receptionist/roster/', DailyRosterView.as_view(), name='daily-roster'),
     path('receptionist/guest/<int:guest_id>/bookings/', GuestBookingHistoryView.as_view(), name='guest-history'),
-    path('staff/', StaffListView.as_view(), name='staff-list'),
     path('', include(router.urls)),
 ]
