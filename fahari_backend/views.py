@@ -114,6 +114,8 @@ class ChangePasswordView(APIView):
 
 
 class MeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
@@ -165,9 +167,14 @@ class BookingViewSet(viewsets.ModelViewSet):
 
 
 class CancelBookingView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def post(self, request, pk):
         try:
-            booking = Booking.objects.get(pk=pk, guest=request.user)
+            if request.user.role in ['admin', 'receptionist']:
+                booking = Booking.objects.get(pk=pk)
+            else:
+                booking = Booking.objects.get(pk=pk, guest=request.user)
             if booking.status in ['checked_in', 'checked_out']:
                 return Response({"detail": "Cannot cancel this booking."}, status=400)
             booking.status = 'cancelled'
@@ -247,15 +254,19 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role in ['admin', 'receptionist']:
+        if user.role in ['admin', 'receptionist', 'housekeeper']:
             return MaintenanceRequest.objects.all()
         return MaintenanceRequest.objects.filter(reported_by=user)
 
     def get_permissions(self):
-        if self.action == 'destroy':
-            permission_classes = [IsAdmin]
-        else:
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [permissions.IsAuthenticated]
+        elif self.action == 'create':
+            permission_classes = [permissions.IsAuthenticated]
+        elif self.action in ['update', 'partial_update']:
             permission_classes = [IsHousekeeper]
+        else:  # destroy
+            permission_classes = [IsAdmin]
         return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
@@ -322,6 +333,33 @@ class AdminDashboardView(APIView):
         occupied_rooms = Room.objects.filter(status='occupied').count()
         cleaning_rooms = Room.objects.filter(status='cleaning').count()
 
+        # staff stats
+        total_staff = User.objects.exclude(role='guest').count()
+        receptionist_count = User.objects.filter(role='receptionist').count()
+        housekeeper_count = User.objects.filter(role='housekeeper').count()
+        admin_count = User.objects.filter(role='admin').count()
+        total_guests = User.objects.filter(role='guest').count()
+
+        # payment stats
+        pending_payments = Payment.objects.filter(status='pending').count()
+        completed_payments = Payment.objects.filter(status='completed').count()
+        failed_payments = Payment.objects.filter(status='failed').count()
+
+        # review stats
+        pending_reviews = Review.objects.filter(is_approved=False).count()
+        approved_reviews = Review.objects.filter(is_approved=True).count()
+
+        # housekeeping stats
+        dirty_rooms = HousekeepingAssignment.objects.filter(status='dirty').count()
+        cleaning_in_progress = HousekeepingAssignment.objects.filter(status='cleaning').count()
+        clean_rooms = HousekeepingAssignment.objects.filter(status='clean').count()
+        inspected_rooms = HousekeepingAssignment.objects.filter(status='inspected').count()
+
+        # maintenance stats
+        open_maintenance = MaintenanceRequest.objects.filter(status='open').count()
+        in_progress_maintenance = MaintenanceRequest.objects.filter(status='in_progress').count()
+        resolved_maintenance = MaintenanceRequest.objects.filter(status='resolved').count()
+
         # recent bookings
         recent_bookings = Booking.objects.select_related('guest', 'room').order_by('-created_at')[:5]
         recent_bookings_data = BookingSerializer(recent_bookings, many=True).data
@@ -343,6 +381,33 @@ class AdminDashboardView(APIView):
                 'available': available_rooms,
                 'occupied': occupied_rooms,
                 'cleaning': cleaning_rooms,
+            },
+            'staff': {
+                'total': total_staff,
+                'receptionists': receptionist_count,
+                'housekeepers': housekeeper_count,
+                'admins': admin_count,
+                'guests': total_guests,
+            },
+            'payments': {
+                'pending': pending_payments,
+                'completed': completed_payments,
+                'failed': failed_payments,
+            },
+            'reviews': {
+                'pending_approval': pending_reviews,
+                'approved': approved_reviews,
+            },
+            'housekeeping': {
+                'dirty': dirty_rooms,
+                'cleaning': cleaning_in_progress,
+                'clean': clean_rooms,
+                'inspected': inspected_rooms,
+            },
+            'maintenance': {
+                'open': open_maintenance,
+                'in_progress': in_progress_maintenance,
+                'resolved': resolved_maintenance,
             },
             'recent_bookings': recent_bookings_data,
         })
@@ -416,7 +481,7 @@ class StaffListView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        serializer = StaffRegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             return Response(UserSerializer(user).data, status=201)
@@ -461,6 +526,16 @@ def _sync_pending_payment(payment):
         payment.save(update_fields=["status", "updated_at"])
 
     return payment
+
+
+class PaymentListView(generics.ListAPIView):
+    serializer_class = PaymentSerializer
+    permission_classes = [IsReceptionist]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['status']
+
+    def get_queryset(self):
+        return Payment.objects.select_related('booking').order_by('-created_at')
 
 
 class InitiatePaymentView(APIView):

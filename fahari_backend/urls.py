@@ -9,7 +9,7 @@ from .views import (
     ReviewViewSet, AdminDashboardView,
     WalkInBookingView, DailyRosterView,
     GuestBookingHistoryView, StaffListView,
-    InitiatePaymentView, PaymentStatusView, MpesaCallbackView,
+    InitiatePaymentView, PaymentStatusView, MpesaCallbackView, PaymentListView,
     UserDetailView, UserListView, UpdateProfileView, ChangePasswordView
 )
 
@@ -41,6 +41,7 @@ urlpatterns = [
 
     path('admin/dashboard/', AdminDashboardView.as_view(), name='admin-dashboard'),
     path('staff/', StaffListView.as_view(), name='staff-list'),
+    path('payments/', PaymentListView.as_view(), name='payment-list'),
     
 
     path('mpesa/callback/', MpesaCallbackView.as_view(), name='mpesa-callback'),
