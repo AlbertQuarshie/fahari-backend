@@ -186,43 +186,43 @@ POST   /api/auth/logout/
 ### Room Endpoints
 
 ```http
-GET    /api/rooms/
-GET    /api/rooms/{room_id}/
-POST   /api/rooms/
-PUT    /api/rooms/{room_id}/
-DELETE /api/rooms/{room_id}/
+GET    /api/auth/rooms/
+GET    /api/auth/rooms/{room_id}/
+POST   /api/auth/rooms/
+PUT    /api/auth/rooms/{room_id}/
+DELETE /api/auth/rooms/{room_id}/
 ```
 
 ### Booking Endpoints
 
 ```http
-GET    /api/bookings/
-GET    /api/bookings/{booking_id}/
-POST   /api/bookings/
-PUT    /api/bookings/{booking_id}/
-DELETE /api/bookings/{booking_id}/
+GET    /api/auth/bookings/
+GET    /api/auth/bookings/{booking_id}/
+POST   /api/auth/bookings/
+PUT    /api/auth/bookings/{booking_id}/
+DELETE /api/auth/bookings/{booking_id}/
 ```
 
 ### Payment Endpoints
 
 ```http
-POST   /api/payments/initiate/
-POST   /api/payments/verify/
-GET    /api/payments/{payment_id}/
+POST   /api/auth/payments/initiate/
+POST   /api/auth/payments/verify/
+GET    /api/auth/payments/{payment_id}/
 ```
 
 ### Check-In / Check-Out Endpoints
 
 ```http
-POST   /api/bookings/{booking_id}/checkin/
-POST   /api/bookings/{booking_id}/checkout/
+POST   /api/auth/bookings/{booking_id}/checkin/
+POST   /api/auth/bookings/{booking_id}/checkout/
 ```
 
 ### Housekeeping Endpoints
 
 ```http
-GET    /api/housekeeping/tasks/
-PUT    /api/housekeeping/tasks/{task_id}/
+GET    /api/auth/housekeeping/tasks/
+PATCH    /api/auth/housekeeping/tasks/{task_id}/
 ```
 
 ### Admin Endpoints
@@ -230,7 +230,7 @@ PUT    /api/housekeeping/tasks/{task_id}/
 ```http
 GET    /api/admin/staff/
 POST   /api/admin/staff/
-GET    /api/admin/reports/
+
 ```
 
 ---
@@ -247,15 +247,3 @@ GET    /api/admin/reports/
 | Payments             | Mpesa Daraja API            |
 | Deployment           | Render                      |
 
----
-
-## I. Screenshots
-
-1. Login Page Endpoint
-![Login](screenshots/image-1.png)
-
-2. Room Listing Endpoint
-![Rooms](screenshots/image-2.png)
-
-3. Booking Endpoint
-![Bookings](screenshots/image.png)
