@@ -276,7 +276,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'admin':
+        if user.is_authenticated and user.role == 'admin':
             return Review.objects.all()
         return Review.objects.filter(is_approved=True)
 
