@@ -270,15 +270,13 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
-        serializer.save(reported_by=self.request.user)
+        serializer.save(reported_by=self.request.user)  
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
-        user = self.request.user
-        if user.is_authenticated and user.role == 'admin':
-            return Review.objects.all()
-        return Review.objects.filter(is_approved=True)
+        # Show all reviews - no approval needed
+        return Review.objects.all().order_by('-created_at')
 
     def get_permissions(self):
         if self.action == 'create':
