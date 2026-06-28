@@ -283,12 +283,21 @@ class ReviewViewSet(viewsets.ModelViewSet):
             permission_classes = [permissions.IsAuthenticated]
         elif self.action in ['update', 'partial_update', 'destroy']:
             permission_classes = [IsAdmin]
+        elif self.action == 'my_reviews':
+            permission_classes = [permissions.IsAuthenticated]
         else:
             permission_classes = [permissions.AllowAny]
         return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
         serializer.save(guest=self.request.user)
+
+    def my_reviews(self, request):
+        """Get reviews submitted by current user"""
+        from rest_framework.decorators import action
+        reviews = Review.objects.filter(guest=request.user).order_by('-created_at')
+        serializer = self.get_serializer(reviews, many=True)
+        return Response(serializer.data)
 
 
 class AdminDashboardView(APIView):
