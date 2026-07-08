@@ -11,6 +11,7 @@ from .mpesa import stk_push, stk_query, mpesa_success_code
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 import logging
+from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,6 @@ class MeView(APIView):
 
 
 class RoomViewSet(viewsets.ModelViewSet):
-    queryset = Room.objects.all()
     serializer_class = RoomSerializer
     filter_backends = [
         DjangoFilterBackend,
@@ -133,12 +133,35 @@ class RoomViewSet(viewsets.ModelViewSet):
     search_fields = ['room_number', 'room_type']
     ordering_fields = ['price_per_night', 'floor']
 
+    def get_queryset(self):
+        queryset = Room.objects.all()
+        check_in = self.request.query_params.get('check_in')
+        check_out = self.request.query_params.get('check_out')
+
+        if check_in and check_out:
+            try:
+                ci = date.fromisoformat(check_in)
+                co = date.fromisoformat(check_out)
+            except ValueError:
+                ci = co = None
+
+            if ci and co and ci < co:
+                conflicting_room_ids = Booking.objects.filter(
+                    status__in=['pending', 'confirmed', 'checked_in'],
+                    check_in_date__lt=co,
+                    check_out_date__gt=ci,
+                ).values_list('room_id', flat=True)
+                queryset = queryset.exclude(id__in=conflicting_room_ids).exclude(status='maintenance')
+
+        return queryset
+
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             permission_classes = [permissions.AllowAny]
         else:
             permission_classes = [IsAdmin]
         return [permission() for permission in permission_classes]
+
 class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
