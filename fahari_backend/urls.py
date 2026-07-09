@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
-    RegisterView, StaffRegisterView, LogoutView, MeView,
+    ContactMessageViewSet, RegisterView, StaffRegisterView, LogoutView, MeView,
     RoomViewSet, BookingViewSet, CancelBookingView,
     CheckInOutView, ConfirmBookingView,
     HousekeepingViewSet, MaintenanceRequestViewSet,
@@ -10,7 +10,7 @@ from .views import (
     WalkInBookingView, DailyRosterView,
     GuestBookingHistoryView, StaffListView,
     InitiatePaymentView, PaymentStatusView, MpesaCallbackView, PaymentListView,
-    UserDetailView, UserListView, UpdateProfileView, ChangePasswordView
+    UserDetailView, UserListView, UpdateProfileView, ChangePasswordView, ContactMessageViewSet
 )
 
 router = DefaultRouter()
@@ -19,6 +19,7 @@ router.register(r'bookings', BookingViewSet, basename='booking')
 router.register(r'housekeeping', HousekeepingViewSet, basename='housekeeping')
 router.register(r'maintenance', MaintenanceRequestViewSet, basename='maintenance')
 router.register(r'reviews', ReviewViewSet, basename='review')
+router.register(r'contact-messages', ContactMessageViewSet, basename='contact-message')
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),

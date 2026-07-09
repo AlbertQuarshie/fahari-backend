@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment
+from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment, ContactMessage
 
 
 @admin.register(User)
@@ -83,3 +83,9 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = ('booking', 'phone_number', 'amount', 'status', 'mpesa_receipt', 'created_at')
     list_filter = ('status',)
     search_fields = ('booking__booking_reference', 'mpesa_receipt')
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = ('name', 'email', 'subject', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('name', 'email', 'subject')

@@ -3,13 +3,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Room
-from .serializers import RegisterSerializer, StaffRegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer, ReviewSerializer, PaymentSerializer
+from .serializers import RegisterSerializer, StaffRegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer, ReviewSerializer, PaymentSerializer, ContactMessageSerializer
 from .permissions import IsAdmin, IsReceptionist, IsHousekeeper
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment
+from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment, ContactMessage
 from .mpesa import stk_push, stk_query, mpesa_success_code
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.core.mail import send_mail
+from django.conf import settings
 import logging
 from datetime import date
 
@@ -294,6 +296,7 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(reported_by=self.request.user)  
+
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
 
@@ -322,7 +325,37 @@ class ReviewViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(reviews, many=True)
         return Response(serializer.data)
 
+class ContactMessageViewSet(viewsets.ModelViewSet):
+    serializer_class = ContactMessageSerializer
+    queryset = ContactMessage.objects.all()
 
+    def get_permissions(self):
+        if self.action == 'create':
+            permission_classes = [permissions.AllowAny]
+        else:
+            permission_classes = [IsAdmin]
+        return [permission() for permission in permission_classes]
+
+    def perform_create(self, serializer):
+        contact_message = serializer.save()
+        try:
+            send_mail(
+                subject=f"Fahari Grand — New Contact Message: {contact_message.subject}",
+                message=(
+                    f"You have a new message from the Fahari Grand website.\n\n"
+                    f"Name: {contact_message.name}\n"
+                    f"Email: {contact_message.email}\n"
+                    f"Phone: {contact_message.phone or 'Not provided'}\n\n"
+                    f"Message:\n{contact_message.message}\n\n"
+                    f"— Sent {contact_message.created_at.strftime('%d %b %Y, %H:%M')}"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[settings.CONTACT_NOTIFICATION_EMAIL],
+                fail_silently=False,
+            )
+        except Exception:
+            logger.exception("Failed to send contact notification email")
+            
 class AdminDashboardView(APIView):
     permission_classes = [IsAdmin]
 

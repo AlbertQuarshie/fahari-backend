@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment
+from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment, ContactMessage
 from datetime import date
 
 
@@ -213,3 +213,9 @@ class PaymentSerializer(serializers.ModelSerializer):
         model = Payment
         fields = ('id', 'booking', 'booking_reference', 'phone_number', 'amount', 'mpesa_checkout_id', 'mpesa_receipt', 'status', 'created_at')
         read_only_fields = ('id', 'mpesa_checkout_id', 'mpesa_receipt', 'status', 'created_at')
+
+class ContactMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactMessage
+        fields = ('id', 'name', 'email', 'phone', 'subject', 'message', 'status', 'created_at')
+        read_only_fields = ('id', 'status', 'created_at')
