@@ -10,10 +10,10 @@ from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequ
 from .mpesa import stk_push, stk_query, mpesa_success_code
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.core.mail import send_mail
 from django.conf import settings
-import logging
 from datetime import date
+import logging
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +163,6 @@ class RoomViewSet(viewsets.ModelViewSet):
         else:
             permission_classes = [IsAdmin]
         return [permission() for permission in permission_classes]
-
 class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -296,7 +295,6 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(reported_by=self.request.user)  
-
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
 
@@ -325,6 +323,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(reviews, many=True)
         return Response(serializer.data)
 
+
 class ContactMessageViewSet(viewsets.ModelViewSet):
     serializer_class = ContactMessageSerializer
     queryset = ContactMessage.objects.all()
@@ -339,23 +338,33 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         contact_message = serializer.save()
         try:
-            send_mail(
-                subject=f"Fahari Grand — New Contact Message: {contact_message.subject}",
-                message=(
-                    f"You have a new message from the Fahari Grand website.\n\n"
-                    f"Name: {contact_message.name}\n"
-                    f"Email: {contact_message.email}\n"
-                    f"Phone: {contact_message.phone or 'Not provided'}\n\n"
-                    f"Message:\n{contact_message.message}\n\n"
-                    f"— Sent {contact_message.created_at.strftime('%d %b %Y, %H:%M')}"
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[settings.CONTACT_NOTIFICATION_EMAIL],
-                fail_silently=False,
+            response = requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": "Fahari Grand Hotel <onboarding@resend.dev>",
+                    "to": [settings.CONTACT_NOTIFICATION_EMAIL],
+                    "subject": f"Fahari Grand — New Contact Message: {contact_message.subject}",
+                    "text": (
+                        f"You have a new message from the Fahari Grand website.\n\n"
+                        f"Name: {contact_message.name}\n"
+                        f"Email: {contact_message.email}\n"
+                        f"Phone: {contact_message.phone or 'Not provided'}\n\n"
+                        f"Message:\n{contact_message.message}\n\n"
+                        f"— Sent {contact_message.created_at.strftime('%d %b %Y, %H:%M')}"
+                    ),
+                },
+                timeout=10,
             )
+            if response.status_code >= 400:
+                logger.error("Resend API error %s: %s", response.status_code, response.text)
         except Exception:
             logger.exception("Failed to send contact notification email")
-            
+
+
 class AdminDashboardView(APIView):
     permission_classes = [IsAdmin]
 
