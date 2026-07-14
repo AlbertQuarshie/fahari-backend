@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
     ContactMessageViewSet, RegisterView, StaffRegisterView, LogoutView, MeView,
-    RoomViewSet, BookingViewSet, CancelBookingView,
+    RoomViewSet, RoomImageViewSet, BookingViewSet, CancelBookingView,
     CheckInOutView, ConfirmBookingView,
     HousekeepingViewSet, MaintenanceRequestViewSet,
     ReviewViewSet, AdminDashboardView,
@@ -15,6 +15,7 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r'rooms', RoomViewSet, basename='room')
+router.register(r'room-images', RoomImageViewSet, basename='room-image')
 router.register(r'bookings', BookingViewSet, basename='booking')
 router.register(r'housekeeping', HousekeepingViewSet, basename='housekeeping')
 router.register(r'maintenance', MaintenanceRequestViewSet, basename='maintenance')

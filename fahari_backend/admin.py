@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment, ContactMessage
+from .models import User, Room, RoomImage, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment, ContactMessage
 
 
 @admin.register(User)
@@ -27,6 +27,12 @@ class UserAdmin(admin.ModelAdmin):
     )
 
 
+class RoomImageInline(admin.TabularInline):
+    model = RoomImage
+    extra = 1
+    fields = ('image', 'caption', 'order')
+
+
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
     list_display = (
@@ -47,6 +53,16 @@ class RoomAdmin(admin.ModelAdmin):
     search_fields = (
         'room_number',
     )
+
+    inlines = [RoomImageInline]
+
+
+@admin.register(RoomImage)
+class RoomImageAdmin(admin.ModelAdmin):
+    list_display = ('room', 'caption', 'order', 'created_at')
+    list_filter = ('room',)
+    search_fields = ('room__room_number', 'caption')
+
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):

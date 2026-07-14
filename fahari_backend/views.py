@@ -2,8 +2,8 @@ from rest_framework import generics, permissions, viewsets, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, Room
-from .serializers import RegisterSerializer, StaffRegisterSerializer, UserSerializer, RoomSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer, ReviewSerializer, PaymentSerializer, ContactMessageSerializer
+from .models import User, Room, RoomImage
+from .serializers import RegisterSerializer, StaffRegisterSerializer, UserSerializer, RoomSerializer, RoomImageSerializer, BookingSerializer, HousekeepingAssignmentSerializer, MaintenanceRequestSerializer, ReviewSerializer, PaymentSerializer, ContactMessageSerializer
 from .permissions import IsAdmin, IsReceptionist, IsHousekeeper
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment, ContactMessage
@@ -163,6 +163,24 @@ class RoomViewSet(viewsets.ModelViewSet):
         else:
             permission_classes = [IsAdmin]
         return [permission() for permission in permission_classes]
+
+
+class RoomImageViewSet(viewsets.ModelViewSet):
+    serializer_class = RoomImageSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['room']
+
+    def get_queryset(self):
+        return RoomImage.objects.all()
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [permissions.AllowAny]
+        else:
+            permission_classes = [IsAdmin]
+        return [permission() for permission in permission_classes]
+
+
 class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]

@@ -99,6 +99,25 @@ class Room(models.Model):
         ordering = ['floor', 'room_number']
 
 
+# Room Gallery Images (multiple photos per room - bedroom, bathroom, living area, etc.)
+class RoomImage(models.Model):
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='images')
+
+    image = CloudinaryField('image')
+
+    caption = models.CharField(max_length=100, blank=True)
+
+    order = models.PositiveIntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Image for Room {self.room.room_number} ({self.caption or self.pk})"
+
+    class Meta:
+        ordering = ['order', 'created_at']
+
+
 # Booking Models
 class Booking(models.Model):
     STATUS_CHOICES = (

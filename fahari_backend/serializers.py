@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from fahari_backend.models import User, Room, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment, ContactMessage
+from fahari_backend.models import User, Room, RoomImage, Booking, HousekeepingAssignment, MaintenanceRequest, Review, Payment, ContactMessage
 from datetime import date
 
 
@@ -94,7 +94,16 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
 
+class RoomImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RoomImage
+        fields = ('id', 'room', 'image', 'caption', 'order', 'created_at')
+        read_only_fields = ('id', 'created_at')
+
+
 class RoomSerializer(serializers.ModelSerializer):
+    images = RoomImageSerializer(many=True, read_only=True)
+
     class Meta:
         model = Room
         fields = (
@@ -106,6 +115,7 @@ class RoomSerializer(serializers.ModelSerializer):
             'price_per_night',
             'status',
             'image',
+            'images',
             'description',
             'created_at'
         )
