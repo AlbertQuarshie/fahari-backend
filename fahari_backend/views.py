@@ -732,6 +732,7 @@ class MpesaCallbackView(APIView):
             logger.error("M-Pesa callback for unknown checkout ID: %s", data)
             return Response({"ResultCode": 0, "ResultDesc": "Success"})
 
+
         except (KeyError, TypeError) as exc:
             logger.error("Invalid M-Pesa callback payload: %s", exc)
             return Response({"ResultCode": 1, "ResultDesc": "Invalid payload"}, status=400)
